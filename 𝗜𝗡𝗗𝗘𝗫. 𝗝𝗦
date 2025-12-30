@@ -1,0 +1,26 @@
+const { default: makeWASocket, useSingleFileAuthState } = require('@adiwajshing/baileys');
+const { state, saveState } = useSingleFileAuthState('./auth_info.json');
+const fs = require('fs');
+
+const commands = {};
+fs.readdirSync('./commands').forEach(file => {
+    if (file.endsWith('.js')) {
+        const command = require(`./commands/${file}`);
+        commands[command.name] = command;
+    }
+});
+
+async function startBot() {
+    const sock = makeWASocket({ auth: state });
+
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message) return;
+        const text = msg.message.conversation || '';
+        if (!text.startsWith('.')) return;
+
+        const args = text.slice(1).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+
+        if (commands[commandName]) {
+            commands[commandName].execute(sock, msg, args
